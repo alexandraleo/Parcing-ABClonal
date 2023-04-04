@@ -32,7 +32,7 @@ def get_source_html(url, art):
     driver.get(url)
     # print(len(driver.find_elements(By.CSS_SELECTOR, "input.form-control.ui-autocomplete-input")))
     search_input = driver.find_elements(By.CSS_SELECTOR, "input.form-control.ui-autocomplete-input")[0].send_keys(art + Keys.ENTER)
-    # TODO в зависимости от хэдлесс и размера окна, то 0, то 1 элемент. If-else? Message: element not interactable
+    # TODO в зависимости от хэдлесс и размера окна, то 0, то 1 элемент. If-else? Попробовать другой набор классов в качестве пути
     return driver.page_source
 
 def get_soup(url, art):
