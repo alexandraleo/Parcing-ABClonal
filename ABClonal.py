@@ -78,7 +78,7 @@ def get_art_structure(soup):
     cat_no = soup.find("th", string="Catalog No.").find_next_sibling("td").get_text().strip()
     title = soup.find("th", string="Product name").find_next_sibling("td").get_text().strip()
     host = soup.find("th", string="Host species").find_next_sibling("td").get_text().strip()
-    antigen = title[:title.find(host)]
+    antigen = title[:title.find(host)].strip()
     clonality = title.split(" ")[-1]
     clonality_en = clonality_dict.get(clonality, clonality)
 
@@ -112,7 +112,7 @@ def get_art_structure(soup):
     volumes_con = soup.find("select", class_="selectsize form-control")
     volumes_opt = volumes_con.find_all("option")
     volumes = [volume["data-size"].split(" ")[0] for volume in volumes_opt]
-    volume_units = [volume["data-size"].split(" ")[1].replace("μ", "u") for volume in volumes_opt]
+    volume_units = [volume["data-size"].split(" ")[1].replace("μ", "u").lower() for volume in volumes_opt]
     # print(volumes)
     prices = [price["data-price"] for price in volumes_opt]
     # print(prices)
