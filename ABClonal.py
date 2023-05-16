@@ -3,7 +3,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
-import html5lib
+# import html5lib
+import lxml
 import time
 from datetime import datetime
 from random import randrange
@@ -28,10 +29,24 @@ def get_art_page(driver, art):
 
 def get_soup(html):
     try:
-        soup = BeautifulSoup(html, "html5lib")
+        soup = BeautifulSoup(html, "lxml")
         return soup
     except:
         print('No soup!')
+
+def get_dilut_ihc(diluts):
+    if "IHC-P" in diluts:
+        ihc_dilut = diluts[diluts.find("IHC-P") + 6:diluts.find("\n")]
+        print(ihc_dilut)
+        ihc_dilut_text = "иммуногистохимии на парафиновых срезах (рекомендуемое разведение " + ihc_dilut.strip() + ")"
+    elif "IHC" in diluts:
+        ihc_dilut = diluts[diluts.find("IHC")+4:diluts.find("\n")]
+        print(ihc_dilut)
+        ihc_dilut_text = "иммуногистохимии (рекомендуемое разведение " + ihc_dilut.strip() + ")"
+    else:
+        ihc_dilut_text = "иммуногистохимии"
+
+    return ihc_dilut_text
 
 def get_art_structure(soup):
     # soup = get_soup(url, art)
@@ -55,10 +70,12 @@ def get_art_structure(soup):
         "Mouse": "мышь",
         "Rat": "крыса"
     }
-
     applications_dict = {
         "WB": "вестерн-блоттинга",
         "IHC": "иммуногистохимии",
+        "IHC-P": "иммуногистохимии на парафиновых срезах",
+        # "IHC": ihc_text,
+        # "IHC-P": ihc_text,
         "IF/ICC": "иммунофлуоресцентного/иммуноцитохимического анализа",
         "IP": "иммунопреципитации",
         "ChIP": "иммунопреципитации хроматина",
@@ -91,8 +108,17 @@ def get_art_structure(soup):
     for li in dilus_con:
         txt = li.get_text().strip()
         dilus.append(txt)
-    # print(dilus)
+        if "IHC-P" in txt:
+            ihc_dilut = txt[txt.find("IHC-P") + 6 :]
+            ihc_dilut_text = "иммуногистохимии на парафиновых срезах (рекомендуемое разведение " + ihc_dilut + ")"
+            applications_dict["IHC-P"] = ihc_dilut_text
+        elif "IHC" in txt:
+            ihc_dilut = txt[txt.find("IHC") + 4 :]
+            ihc_dilut_text = "иммуногистохимии (рекомендуемое разведение " + ihc_dilut + ")"
+            applications_dict["IHC"] = ihc_dilut_text
+
     dilutions = "\n".join(dilus)
+
     appls = soup.find("th", string="Tested applications").find_next_sibling("td").find_all("a")
     appl_list = []
     for appl in appls:
@@ -100,22 +126,35 @@ def get_art_structure(soup):
             appl_txt = appl["data-label"].strip()
             appl_list.append(appl_txt)
 
+
     reactivity = soup.find("th", string="Reactivity").find_next_sibling("td").get_text().strip()
-    reactivity_ru = ", ".join([reactivity_dict.get(w.strip(), "") for w in reactivity.split(", ")])
-    appl_ru = ", ".join([applications_dict.get(w.strip(), "") for w in appl_list])
+    reactivity_ru = ", ".join([reactivity_dict.get(w.strip(), w.strip()) for w in reactivity.split(", ")])
+    appl_ru = ", ".join([applications_dict.get(w.strip(), w.strip()) for w in appl_list])
     text = dilutions + "\n" + reactivity
 
     storage_buff = soup.find("th", string="Storage buffer").find_next_sibling("td").get_text().strip()
+    if not storage_buff:
+        storage_buff = ""
     storage = soup.find("th", string="Storage buffer").find_next_sibling("td").get_text().strip()
+    if not storage:
+        storage = ""
+    synonyms = soup.find("th", string="Synonyms").find_next_sibling("td").get_text().strip()
+    if not synonyms:
+        synonyms = ""
 
     # title = soup.find("h1", itemprop="name").get_text().strip()
     volumes_con = soup.find("select", class_="selectsize form-control")
     volumes_opt = volumes_con.find_all("option")
     volumes = [volume["data-size"].split(" ")[0] for volume in volumes_opt]
+
     volume_units = [volume["data-size"].split(" ")[1].replace("μ", "u").lower() for volume in volumes_opt]
-    # print(volumes)
     prices = [price["data-price"] for price in volumes_opt]
-    # print(prices)
+
+    volume_20 = soup.find("a", string="Hot 20 μL Inquiry")
+    if volume_20:
+        volumes.insert(0, "20")
+        volume_units.insert(0, "ul")
+        prices.insert(0, "?")
 
     dict_list = []
     for i in range(0, len(volumes)):
@@ -139,6 +178,7 @@ def get_art_structure(soup):
             "Conjugation": "",
             "Storage instructions": storage,
             "Storage buffer": storage_buff,
+            "Synonyms": synonyms,
             "Concentration": "",
             "Price": prices[i],
         }
@@ -149,7 +189,7 @@ def get_art_structure(soup):
 def write_csv(result):
     date = datetime.now().strftime('%d.%m.%Y_%H.%M')
     # columns = set(i for d in result for i in d)
-    with open("data\\ABClonal_{}.csv".format(date), "w", encoding="utf-8", newline="") as f:
+    with open("data-abc\\ABClonal_{}.csv".format(date), "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=result[0].keys())
         writer.writeheader()
         writer.writerows(result)
@@ -159,7 +199,7 @@ def get_articles_list():
     articles = [str(art) for art in input().split(",")]
     return articles
 
-service = Service("C:\\Users\\shurshun_4ik\\AppData\\Local\\Programs\\Python\\chromedriver.exe")
+service = Service("C:\\Users\\Public\\Parsing programs\\chromedriver.exe")
 options = webdriver.ChromeOptions()
 options.add_argument("--disable-extensions")
 # options.add_argument("--disable-gpu")
