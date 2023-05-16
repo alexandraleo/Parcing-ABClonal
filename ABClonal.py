@@ -3,7 +3,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
-# import html5lib
 import lxml
 import time
 from datetime import datetime
@@ -16,8 +15,7 @@ ARTS = "a4923, a15100"
 
 def get_art_page(driver, art):
     driver.implicitly_wait(10)
-    # driver.get(url)
-    # print(len(driver.find_elements(By.CSS_SELECTOR, "input.form-control.ui-autocomplete-input")))
+
     try:
         time.sleep(2)
         search_input = driver.find_elements(By.CSS_SELECTOR, "input.form-control.ui-autocomplete-input")[0].send_keys(art + Keys.ENTER)
@@ -25,7 +23,6 @@ def get_art_page(driver, art):
         return driver.page_source
     except:
         print('No search input, art ' + art)
-    # TODO в зависимости от хэдлесс и размера окна, то 0, то 1 элемент. If-else? Попробовать другой набор классов в качестве пути
 
 def get_soup(html):
     try:
@@ -49,17 +46,6 @@ def get_dilut_ihc(diluts):
     return ihc_dilut_text
 
 def get_art_structure(soup):
-    # soup = get_soup(url, art)
-    # if not soup:
-    #     print("No soup!")
-
-    # table_ths = soup.find_all("th")
-    # tbl_ths = [th.get_text(" ") for th in table_ths]
-    # table_tds = soup.find_all("td")
-    # tbl_tds = [td.get_text(" ") for td in table_tds]
-    # dict_art = dict(zip(tbl_ths, tbl_tds))
-    # catpos = soup.find("h3", class_="catpos")
-    # dict_art["Catalog position"] = catpos.get_text(" ")
     clonality_dict = {
         "mAb": "monoclonal",
         "pAb": "polyclonal"
@@ -74,8 +60,6 @@ def get_art_structure(soup):
         "WB": "вестерн-блоттинга",
         "IHC": "иммуногистохимии",
         "IHC-P": "иммуногистохимии на парафиновых срезах",
-        # "IHC": ihc_text,
-        # "IHC-P": ihc_text,
         "IF/ICC": "иммунофлуоресцентного/иммуноцитохимического анализа",
         "IP": "иммунопреципитации",
         "ChIP": "иммунопреципитации хроматина",
@@ -142,7 +126,6 @@ def get_art_structure(soup):
     if not synonyms:
         synonyms = ""
 
-    # title = soup.find("h1", itemprop="name").get_text().strip()
     volumes_con = soup.find("select", class_="selectsize form-control")
     volumes_opt = volumes_con.find_all("option")
     volumes = [volume["data-size"].split(" ")[0] for volume in volumes_opt]
@@ -159,9 +142,7 @@ def get_art_structure(soup):
     dict_list = []
     for i in range(0, len(volumes)):
         dict_art = {
-            # "Article": art,
             "Article": cat_no,
-            # "CatNo": cat_no,
             "Volume": volumes[i],
             "Volume units": volume_units[i],
             "Antigen": antigen,
@@ -174,7 +155,7 @@ def get_art_structure(soup):
             "Title": title,
             "Applications": appl_list,
             "Dilutions": dilutions,
-            # # "Form": form,
+            # "Form": form,
             "Conjugation": "",
             "Storage instructions": storage,
             "Storage buffer": storage_buff,
@@ -183,12 +164,11 @@ def get_art_structure(soup):
             "Price": prices[i],
         }
         dict_list.append(dict_art)
-    # print(dict_list)
     return dict_list
 
 def write_csv(result):
     date = datetime.now().strftime('%d.%m.%Y_%H.%M')
-    # columns = set(i for d in result for i in d)
+
     with open("data-abc\\ABClonal_{}.csv".format(date), "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=result[0].keys())
         writer.writeheader()
