@@ -45,7 +45,7 @@ def get_dilut_ihc(diluts):
 
     return ihc_dilut_text
 
-def get_art_structure(soup):
+def get_art_structure(soup, art):
     clonality_dict = {
         "mAb": "monoclonal",
         "pAb": "polyclonal"
@@ -54,7 +54,8 @@ def get_art_structure(soup):
     reactivity_dict = {
         "Human": "человек",
         "Mouse": "мышь",
-        "Rat": "крыса"
+        "Rat": "крыса",
+        "Monkey": "обезьяна"
     }
     applications_dict = {
         "WB": "вестерн-блоттинга",
@@ -76,94 +77,160 @@ def get_art_structure(soup):
         "CUT&Tag": "CUT&Tag секвенирование",
         "meRIP": "иммунопреципитации метилированной РНК"
     }
-    cat_no = soup.find("th", string="Catalog No.").find_next_sibling("td").get_text().strip()
-    title = soup.find("th", string="Product name").find_next_sibling("td").get_text().strip()
-    host = soup.find("th", string="Host species").find_next_sibling("td").get_text().strip()
-    antigen = title[:title.find(host)].strip()
-    clonality = title.split(" ")[-1]
-    clonality_en = clonality_dict.get(clonality, clonality)
+    #  TODO переписать ифы на аналоги с контейнерами, чтобы не ломалось на некст_сиблинг
+    discont = soup.find("h1", class_="search-header-title")
+    if discont:
+            cat_no = art,
+            volumes = []
+            volume_units = []
+            antigen = ""
+            host = ""
+            clonality_en = ""
+            clone = ""
+            text = ""
+            appl_ru = []
+            reactivity_ru = []
+            title = ""
+            appl_list = []
+            dilutions = []
+            storage = ""
+            storage_buff = ""
+            synonyms = ""
+            prices = []
+    else:
+        cat_no = soup.find("th", string="Catalog No.").find_next_sibling("td").get_text().strip()
+        if not cat_no:
+            cat_no = art
+        title = soup.find("th", string="Product name").find_next_sibling("td").get_text().strip()
+        if not title:
+            title = ""
+        host = soup.find("th", string="Host species").find_next_sibling("td").get_text().strip()
+        if not host:
+            host = ""
+        antigen = title[:title.find(host)].strip()
+        if not antigen:
+            antigen = ""
+        clonality = title.split(" ")[-1]
+        if not clonality:
+            clonality = ""
+        clonality_en = clonality_dict.get(clonality, clonality)
 
-    try:
-        clone = soup.find("th", string="CloneNo.").find_next_sibling("td").get_text().strip()
-    except:
-        clone = ""
-    dilus_con = soup.find("th", string="Recommended dilution").find_next_sibling("td").find("ul").find_all("li")
-    dilus = []
-    for li in dilus_con:
-        txt = li.get_text().strip()
-        dilus.append(txt)
-        if "IHC-P" in txt:
-            ihc_dilut = txt[txt.find("IHC-P") + 6 :]
-            ihc_dilut_text = "иммуногистохимии на парафиновых срезах (рекомендуемое разведение " + ihc_dilut + ")"
-            applications_dict["IHC-P"] = ihc_dilut_text
-        elif "IHC" in txt:
-            ihc_dilut = txt[txt.find("IHC") + 4 :]
-            ihc_dilut_text = "иммуногистохимии (рекомендуемое разведение " + ihc_dilut + ")"
-            applications_dict["IHC"] = ihc_dilut_text
+        try:
+            clone = soup.find("th", string="CloneNo.").find_next_sibling("td").get_text().strip()
+        except:
+            clone = ""
+        dilus_con = soup.find("th", string="Recommended dilution").find_next_sibling("td").find("ul").find_all("li")
+        dilus = []
+        for li in dilus_con:
+            txt = li.get_text().strip()
+            dilus.append(txt)
+            if "IHC-P" in txt:
+                ihc_dilut = txt[txt.find("IHC-P") + 6 :]
+                ihc_dilut_text = "иммуногистохимии на парафиновых срезах (рекомендуемое разведение " + ihc_dilut + ")"
+                applications_dict["IHC-P"] = ihc_dilut_text
+            elif "IHC" in txt:
+                ihc_dilut = txt[txt.find("IHC") + 4 :]
+                ihc_dilut_text = "иммуногистохимии (рекомендуемое разведение " + ihc_dilut + ")"
+                applications_dict["IHC"] = ihc_dilut_text
 
-    dilutions = "\n".join(dilus)
+        dilutions = "\n".join(dilus)
 
-    appls = soup.find("th", string="Tested applications").find_next_sibling("td").find_all("a")
-    appl_list = []
-    for appl in appls:
-        if appl["data-label"] != "none":
-            appl_txt = appl["data-label"].strip()
-            appl_list.append(appl_txt)
+        appls = soup.find("th", string="Tested applications").find_next_sibling("td").find_all("a")
+        if not appls:
+            appls = ""
+        appl_list = []
+        for appl in appls:
+            if appl["data-label"] != "none":
+                appl_txt = appl["data-label"].strip()
+                appl_list.append(appl_txt)
 
 
-    reactivity = soup.find("th", string="Reactivity").find_next_sibling("td").get_text().strip()
-    reactivity_ru = ", ".join([reactivity_dict.get(w.strip(), w.strip()) for w in reactivity.split(", ")])
-    appl_ru = ", ".join([applications_dict.get(w.strip(), w.strip()) for w in appl_list])
-    text = dilutions + "\n" + reactivity
+        reactivity = soup.find("th", string="Reactivity").find_next_sibling("td").get_text().strip()
+        if not reactivity:
+            reactivity = ""
+        reactivity_ru = ", ".join([reactivity_dict.get(w.strip(), w.strip()) for w in reactivity.split(", ")])
+        appl_ru = ", ".join([applications_dict.get(w.strip(), w.strip()) for w in appl_list])
+        text = dilutions + "\n" + reactivity
 
-    storage_buff = soup.find("th", string="Storage buffer").find_next_sibling("td").get_text().strip()
-    if not storage_buff:
-        storage_buff = ""
-    storage = soup.find("th", string="Storage buffer").find_next_sibling("td").get_text().strip()
-    if not storage:
-        storage = ""
-    synonyms = soup.find("th", string="Synonyms").find_next_sibling("td").get_text().strip()
-    if not synonyms:
-        synonyms = ""
+        storage_buff = soup.find("th", string="Storage buffer").find_next_sibling("td").get_text().strip()
+        if not storage_buff:
+            storage_buff = ""
+        storage = soup.find("th", string="Storage buffer").find_next_sibling("td").get_text().strip()
+        if not storage:
+            storage = ""
+        synonyms = soup.find("th", string="Synonyms").find_next_sibling("td").get_text().strip()
+        if not synonyms:
+            synonyms = ""
 
-    volumes_con = soup.find("select", class_="selectsize form-control")
-    volumes_opt = volumes_con.find_all("option")
-    volumes = [volume["data-size"].split(" ")[0] for volume in volumes_opt]
+        volumes_con = soup.find("select", class_="selectsize form-control")
+        if volumes_con:
+            volumes_opt = volumes_con.find_all("option")
+            volumes = [volume["data-size"].split(" ")[0] for volume in volumes_opt]
 
-    volume_units = [volume["data-size"].split(" ")[1].replace("μ", "u").lower() for volume in volumes_opt]
-    prices = [price["data-price"] for price in volumes_opt]
+            volume_units = [volume["data-size"].split(" ")[1].replace("μ", "u").lower() for volume in volumes_opt]
+            prices = [price["data-price"] for price in volumes_opt]
 
-    volume_20 = soup.find("a", string="Hot 20 μL Inquiry")
-    if volume_20:
-        volumes.insert(0, "20")
-        volume_units.insert(0, "ul")
-        prices.insert(0, "?")
+            volume_20 = soup.find("a", string="Hot 20 μL Inquiry")
+            if volume_20:
+                volumes.insert(0, "20")
+                volume_units.insert(0, "ul")
+                prices.insert(0, "?")
+        else:
+            volumes = []
+            volume_units = []
+            prices = []
+# TODO conjugation
 
     dict_list = []
-    for i in range(0, len(volumes)):
-        dict_art = {
-            "Article": cat_no,
-            "Volume": volumes[i],
-            "Volume units": volume_units[i],
-            "Antigen": antigen,
-            "Host": host,
-            "Clonality": clonality_en,
-            "Clone_num": clone,
-            "Text": text,
-            "Applications_ru": appl_ru,
-            "Reactivity": reactivity_ru,
-            "Title": title,
-            "Applications": appl_list,
-            "Dilutions": dilutions,
-            # "Form": form,
-            "Conjugation": "",
-            "Storage instructions": storage,
-            "Storage buffer": storage_buff,
-            "Synonyms": synonyms,
-            "Concentration": "",
-            "Price": prices[i],
-        }
-        dict_list.append(dict_art)
+    if len(volumes) > 0:
+        for i in range(0, len(volumes)):
+            dict_art = {
+                "Article": cat_no,
+                "Volume": volumes[i],
+                "Volume units": volume_units[i],
+                "Antigen": antigen,
+                "Host": host,
+                "Clonality": clonality_en,
+                "Clone_num": clone,
+                "Text": text,
+                "Applications_ru": appl_ru,
+                "Reactivity": reactivity_ru,
+                "Conjugation": "",
+                "Title": title,
+                "Applications": appl_list,
+                "Dilutions": dilutions,
+                # "Form": form,
+                "Storage instructions": storage,
+                "Storage buffer": storage_buff,
+                "Synonyms": synonyms,
+                "Concentration": "",
+                "Price": prices[i],
+            }
+            dict_list.append(dict_art)
+    else:
+            dict_art = {
+                "Article": cat_no,
+                "Volume": volumes,
+                "Volume units": volume_units,
+                "Antigen": antigen,
+                "Host": host,
+                "Clonality": clonality_en,
+                "Clone_num": clone,
+                "Text": text,
+                "Applications_ru": appl_ru,
+                "Reactivity": reactivity_ru,
+                "Conjugation": "",
+                "Title": title,
+                "Applications": appl_list,
+                "Dilutions": dilutions,
+                # "Form": form,
+                "Storage instructions": storage,
+                "Storage buffer": storage_buff,
+                "Synonyms": synonyms,
+                "Concentration": "",
+                "Price": prices,
+            }
+            dict_list.append(dict_art)
     return dict_list
 
 def write_csv(result):
@@ -176,7 +243,7 @@ def write_csv(result):
 
 def get_articles_list():
     print("Введите список артикулов:")
-    articles = [str(art) for art in input().split(",")]
+    articles = [art.strip() for art in input().split(",")]
     return articles
 
 service = Service("C:\\Users\\Public\\Parsing programs\\chromedriver.exe")
@@ -207,7 +274,7 @@ try:
         print(counter, " art No ", art)
         src = get_art_page(driver, art)
         soup = get_soup(src)
-        art_info = get_art_structure(soup)
+        art_info = get_art_structure(soup, art)
         result.extend(art_info)
     # result_parse = main(SITE_URL, articles)
     # print(result_parse)
